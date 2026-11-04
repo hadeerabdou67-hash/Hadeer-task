@@ -289,6 +289,10 @@ async function handle(req: Request): Promise<Response> {
     return fail("Route not found", 404);
   } catch (error) {
     if (error instanceof SyntaxError) return fail("Invalid JSON body", 400);
+    if (error instanceof Error &&
+        (error.message.startsWith("Invalid ") || error.message === "Request body must be a JSON object")) {
+      return fail(error.message, 400);
+    }
     console.error("verified-skills request failed", error);
     return fail("Internal server error", 500);
   }
