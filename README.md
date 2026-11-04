@@ -71,14 +71,14 @@ The demo candidate is isolated fixture data. For an end-to-end API test, sign in
 4. Configure a restrictive `CORS_ORIGIN` before production.
 5. Demo assessment content must be replaced with reviewed production questions.
 
-## Verification status
+## Smoke test\n\nA read-only schema/security smoke test is included at `supabase/tests/verified_skills_smoke_test.sql`. Run it in the Supabase SQL Editor using a database-owner session after migrations. It verifies required tables, RLS coverage, private answer-key isolation, lifecycle write restrictions, guarded RPC grants, ownership FK, hardening triggers and demo fixtures. It passed against the linked project.\n\n## Verification status
 - [x] Applied database migrations to the linked project.
 - [x] Confirmed all 12 requested tables exist and RLS is enabled.
 - [x] Confirmed seed data: 2 categories, 3 skills, 1 published assessment, 1 question and demo candidate/skill.
 - [x] Confirmed authenticated users cannot read answer keys, write attempt/result/verification lifecycle rows directly, or execute private scoring/profile/start routines; guarded public RPCs remain available.
 - [x] Confirmed candidate skill claims cannot be inserted with a forged verified status.
 - [x] Confirmed attempt ownership is enforced by a composite foreign key.
-- [x] Confirmed answer validation and attempt locking triggers are installed.
+- [x] Confirmed answer validation and attempt locking triggers are installed.\n- [x] Executed `supabase/tests/verified_skills_smoke_test.sql` successfully against the linked database.
 - [x] Deployed Edge Function; status ACTIVE (version 4) with JWT verification enabled.
 - [x] Ran Supabase Security and Performance Advisors.
 - [ ] Run authenticated end-to-end claim/start/answer/submit tests with a real test account; this requires a valid test-user session.
