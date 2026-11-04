@@ -151,9 +151,9 @@ create index if not exists idx_attempts_candidate_assessment on public.assessmen
 create index if not exists idx_verifications_candidate_skill on public.skill_verifications(candidate_skill_id, created_at desc);
 
 -- Candidate profile is created lazily from the authenticated identity.
-create or replace function public.ensure_candidate_profile()
-returns uuid language plpgsql security invoker set search_path = ''
-as $$
+create or replace function private.ensure_candidate_profile()
+returns uuid language plpgsql security definer set search_path = ''
+as $
 declare v_id uuid;
 begin
   if auth.uid() is null then raise exception 'Authentication required' using errcode = '42501'; end if;
@@ -163,7 +163,13 @@ begin
   returning id into v_id;
   return v_id;
 end;
-$$;
+$;
+revoke all on function private.ensure_candidate_profile() from public, anon;
+grant execute on function private.ensure_candidate_profile() to authenticated;
+
+create or replace function public.ensure_candidate_profile()
+returns uuid language sql security invoker set search_path = ''
+as $ select private.ensure_candidate_profile(); $;
 revoke all on function public.ensure_candidate_profile() from public, anon;
 grant execute on function public.ensure_candidate_profile() to authenticated;
 
