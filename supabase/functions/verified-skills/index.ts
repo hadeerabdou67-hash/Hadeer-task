@@ -136,16 +136,12 @@ async function handle(req: Request): Promise<Response> {
 
     const deleteSkill = path.match(/^\/api\/v1\/candidate\/skills\/([0-9a-f-]{36})$/i);
     if (req.method === "DELETE" && deleteSkill) {
-      const { data, error } = await client.from("candidate_skills")
-        .delete()
-        .eq("id", deleteSkill[1])
-        .eq("candidate_id", candidateId)
-        .select("id")
-        .maybeSingle();
+      const { data, error } = await client.rpc("remove_candidate_skill", {
+        p_candidate_skill_id: deleteSkill[1],
+      });
 
       if (error) return databaseError(error);
-      if (!data) return fail("Candidate skill not found or cannot be removed", 404);
-      return response({ deleted: true, id: data.id });
+      return response({ data });
     }
 
     if (req.method === "POST" && path === "/api/v1/candidate/skills/evidence") {
