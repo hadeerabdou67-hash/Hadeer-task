@@ -30,6 +30,7 @@ supabase/
     20261104200200_finalize_scoring_and_profile_permissions.sql
     20261104210000_index_attempts_candidate_skill_owner.sql
     20261104220000_fix_candidate_profile_bootstrap_wrapper.sql
+    20261104230000_guard_candidate_skill_removal.sql
   tests/
     verified_skills_security.sql
     verified_skills_smoke_test.sql
@@ -60,7 +61,7 @@ All public tables have RLS enabled. The private schema is not exposed to authent
 
 Function: `verified-skills`
 
-Deployment: **ACTIVE, version 6**, with JWT verification enabled.
+Deployment: **ACTIVE, version 7**, with JWT verification enabled.
 
 Base URL:
 
@@ -117,17 +118,17 @@ Run the transactional security test (it rolls back its temporary fixture changes
 
 `supabase/tests/verified_skills_security.sql`
 
-The security test was executed successfully against the linked project. It verifies RLS coverage, private answer-key isolation, least-privilege grants, guarded RPC permissions, demo fixtures and rejection of an attempt that pairs a candidate's claim with an assessment for a different skill. A separate SQL auth smoke test also confirmed that claim, start, save-answer and submit RPCs reject unauthenticated calls. The full transactional SQL E2E test was also executed successfully: it simulated an authenticated identity, provisioned a candidate profile, claimed SQL Fundamentals, started the published demo assessment, submitted the correct answer, scored 100% server-side and issued a verified badge; the transaction rolled back and left no test user or attempt behind. This validates the database workflow under an authenticated JWT context, but it is not a live HTTP test using a real browser access token.
+The security test was executed successfully against the linked project. It verifies RLS coverage, private answer-key isolation, least-privilege grants, guarded RPC permissions, demo fixtures and rejection of an attempt that pairs a candidate's claim with an assessment for a different skill. A separate SQL auth smoke test also confirmed that claim, start, save-answer and submit RPCs reject unauthenticated calls. The full transactional SQL E2E test was also executed successfully: it simulated an authenticated identity, provisioned a candidate profile, claimed SQL Fundamentals, started the published demo assessment, submitted the correct answer, scored 100% server-side and issued a verified badge. It also verified that claims with assessment history cannot be deleted while an unused claim can be safely removed. The transaction rolled back and left no test user or attempt behind. This validates the database workflow under an authenticated JWT context, but it is not a live HTTP test using a real browser access token.
 
 Confirmed on the linked project:
 - 12 public tables and the private answer-key table exist.
 - The candidate-profile bootstrap RPC is a SECURITY DEFINER wrapper; authenticated clients can call the public wrapper while the private implementation remains inaccessible. This was corrected after the integration audit.
 - All module tables have RLS enabled.
-- Authenticated users cannot directly insert claims, attempts or answers.
+- Authenticated users cannot directly insert or delete claims, insert attempts or write answers.
 - Authenticated users cannot directly modify candidate profiles, attempts, answers, results or verification lifecycle records.
 - Private schema usage and direct execution of private workflow functions are revoked.
-- Guarded public RPCs are available to authenticated users.
-- The Edge Function is active at version 6 with JWT verification enabled.
+- Guarded public RPCs are available to authenticated users, including profile bootstrap and safe claim removal.
+- The Edge Function is active at version 7 with JWT verification enabled.
 
 Not yet completed: a full authenticated HTTP journey using a real test-user access token (claim → start → save answer → submit → verify badge). The demo candidate is intentionally not an Auth user, and no real user session was created for this test. The Edge Function deployment succeeded (version 6, JWT enabled); a live HTTP request with a real Auth session is still required to certify the full API journey.
 
