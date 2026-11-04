@@ -330,10 +330,7 @@ begin
       raise exception 'Selected option is invalid' using errcode = '22023';
     end if;
   elsif v_question.question_type='true_false' then
-    if not (
-      jsonb_typeof(p_answer)='boolean'
-      or (jsonb_typeof(p_answer)='string' and lower(p_answer #>> '{}') in ('true','false'))
-    ) then
+    if jsonb_typeof(p_answer)<>'boolean' then
       raise exception 'True/false answer must be a boolean' using errcode = '22023';
     end if;
   elsif v_question.question_type='multiple_choice' then
