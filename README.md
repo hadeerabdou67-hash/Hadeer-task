@@ -10,7 +10,7 @@ Implementation for `feature/person-3-assessments`.
 - Candidate-scoped RLS; answer keys are stored in the non-exposed `private` schema.
 
 ## Database
-Migration: `supabase/migrations/20261104150000_verified_skills_assessment.sql`
+Core migration: `supabase/migrations/20261104150000_verified_skills_assessment.sql`\n\nFollow-up hardening migrations:\n- `20261104160000_assessment_security_hardening.sql`\n- `20261104170000_restrict_privileged_rpc_execution.sql`\n- `20261104180000_seed_demo_candidate_skill.sql`\n- `20261104190000_verified_skills_engine_hardening.sql`\n- `20261104200000_verified_skills_integrity_concurrency.sql`\n- `20261104210000_index_attempts_candidate_skill_owner.sql`
 
 Apply with:
 ```bash
@@ -23,7 +23,7 @@ The migrations create the requested entities, indexes, RLS policies, grants, sco
 ## Edge Function
 Function: `verified-skills`
 
-Deployment status: **ACTIVE (version 3)** on the linked Supabase project (JWT verification enabled). Attempt creation is performed by a transactional database RPC; clients cannot insert attempt rows directly. To redeploy from a local checkout:
+Deployment status: **ACTIVE (version 4)** on the linked Supabase project (JWT verification enabled). Attempt creation is performed by a transactional database RPC; clients cannot insert attempt rows directly. To redeploy from a local checkout:
 ```bash
 supabase functions deploy verified-skills
 ```
@@ -33,7 +33,7 @@ All routes require a valid Supabase Auth access token:
 | Method | Route (relative to function) | Purpose |
 |---|---|---|
 | GET | `/api/v1/skills` | List active skills |
-| POST | `/api/v1/candidate/skills` | Claim a skill (`skill_id`) |
+| POST | `/api/v1/candidate/skills` | Claim a skill (`skill_id`) |\n| POST | `/api/v1/candidate/skills/evidence` | Attach evidence to a claimed skill |
 | DELETE | `/api/v1/candidate/skills/:id` | Remove own claim |
 | POST | `/api/v1/candidate/skills/evidence` | Attach evidence |
 | GET | `/api/v1/assessments` | List published assessments; optional `skill_id` |
@@ -79,8 +79,8 @@ The demo candidate is isolated fixture data. For an end-to-end API test, sign in
 - [x] Confirmed candidate skill claims cannot be inserted with a forged verified status.
 - [x] Confirmed attempt ownership is enforced by a composite foreign key.
 - [x] Confirmed answer validation and attempt locking triggers are installed.
-- [x] Deployed Edge Function; status ACTIVE with JWT verification enabled.
+- [x] Deployed Edge Function; status ACTIVE (version 4) with JWT verification enabled.
 - [x] Ran Supabase Security and Performance Advisors.
 - [ ] Run authenticated end-to-end claim/start/answer/submit tests with a real test account; this requires a valid test-user session.
 
-Advisor notes: the private answer-key table intentionally has RLS enabled with no client policies. The public SECURITY DEFINER RPCs (`ensure_candidate_profile`, `start_assessment_attempt`, `submit_assessment_attempt`) are narrow authenticated entry points; each internal routine checks `auth.uid()` and scopes operations to that identity. Supabase Security Advisor reports these wrappers for review by design. Performance Advisor may report unused indexes while the schema has little traffic; reassess after representative usage.
+Advisor notes: the private answer-key table intentionally has RLS enabled with no client policies. The public SECURITY DEFINER RPCs (`ensure_candidate_profile`, `start_assessment_attempt`, `submit_assessment_attempt`) are narrow authenticated entry points; each internal routine checks `auth.uid()` and scopes operations to that identity. Supabase Security Advisor reports these wrappers for review by design. Performance Advisor reports unused indexes while the schema has little traffic; these are informational and should be reassessed after representative usage. No duplicate-index or unindexed-FK warnings remain.
