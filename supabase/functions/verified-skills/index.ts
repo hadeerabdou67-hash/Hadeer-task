@@ -189,7 +189,7 @@ async function handle(req: Request): Promise<Response> {
       return json({ data });
     }
 
-    const submitAttempt = path.match(/^\\/api\\/v1\\/attempts\\/([0-9a-f-]{36})\\/submit$/i);
+    const submitAttempt = path.match(/^\/api\/v1\/attempts\/([0-9a-f-]{36})\/submit$/i);
     if (req.method === "POST" && submitAttempt) {
       const { data, error } = await client.rpc("submit_assessment_attempt", { p_attempt_id: submitAttempt[1] });
       if (error) {
