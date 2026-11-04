@@ -26,6 +26,8 @@ declare
   v_question uuid;
   v_result jsonb;
   v_badge_count integer;
+  v_second_skill uuid;
+  v_second_claim uuid;
 begin
   if auth.uid() <> 'f8f8a8b1-7f40-4d13-9b9e-9d4ef9a10a11'::uuid then
     raise exception 'JWT subject simulation failed';
@@ -68,6 +70,19 @@ begin
   if v_badge_count <> 1 then
     raise exception 'Expected one verified badge, got %',v_badge_count;
   end if;
+
+  -- A claim with an assessment attempt must remain for audit/history integrity.
+  begin
+    perform public.remove_candidate_skill(v_candidate_skill);
+    raise exception 'FAIL: claim with assessment history was deleted';
+  exception when sqlstate 'P0001' then
+    null;
+  end;
+
+  -- A fresh, unused claim may be removed safely.
+  select id into v_second_skill from public.skills where slug='api-design';
+  v_second_claim := (public.claim_candidate_skill(v_second_skill)->>'id')::uuid;
+  perform public.remove_candidate_skill(v_second_claim);
 
   raise notice 'PASS: claim -> start -> answer -> server-side score -> verified badge. Result: %',v_result;
 end;
