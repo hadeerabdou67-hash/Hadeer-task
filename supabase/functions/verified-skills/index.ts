@@ -189,12 +189,16 @@ async function handle(req: Request): Promise<Response> {
       return json({ data });
     }
 
-    const submitAttempt = path.match(/^\/api\/v1\/attempts\/([0-9a-f-]{36})\/submit$/i);
+    const submitAttempt = path.match(/^\\/api\\/v1\\/attempts\\/([0-9a-f-]{36})\\/submit$/i);
     if (req.method === "POST" && submitAttempt) {
       const { data, error } = await client.rpc("submit_assessment_attempt", { p_attempt_id: submitAttempt[1] });
       if (error) {
-        const status = error.code === "42501" ? 403 : error.code === "P0002" ? 404 : 409;
-        return fail(error.message, status);
+        const status = error.code === "42501" ? 403 : error.code === "P0002" ? 404 :
+          error.code === "23505" ? 409 : error.code === "22023" ? 400 : 500;
+        return fail(status === 500 ? "Assessment scoring failed" : error.message, status);
+      }
+      if (isRecord(data) && data.code === "ATTEMPT_EXPIRED") {
+        return fail("Attempt expired", 410, "ATTEMPT_EXPIRED");
       }
       return json({ data });
     }
@@ -218,9 +222,9 @@ async function handle(req: Request): Promise<Response> {
 
     return fail("Route not found", 404);
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unexpected server error";
-    const status = /Authentication|session/i.test(message) ? 401 : 400;
-    return fail(message, status);
+    if (error instanceof SyntaxError) return fail("Invalid JSON body", 400);
+    console.error("verified-skills request failed", error);
+    return fail("Internal server error", 500);
   }
 }
 
