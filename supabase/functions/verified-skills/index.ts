@@ -137,25 +137,29 @@ async function handle(req: Request): Promise<Response> {
       return json({ data });
     }
 
-    const startAssessment = path.match(/^\/api\/v1\/assessments\/([0-9a-f-]{36})\/start$/i);
+    const startAssessment = path.match(/^\\/api\\/v1\\/assessments\\/([0-9a-f-]{36})\\/start$/i);
     if (req.method === "POST" && startAssessment) {
       const input = await body(req);
       const candidateSkillId = requiredString(input.candidate_skill_id, "candidate_skill_id", 36);
       const headerKey = req.headers.get("idempotency-key");
       const bodyKey = typeof input.idempotency_key === "string" ? input.idempotency_key : null;
       if (headerKey && bodyKey && headerKey !== bodyKey) {
-        throw new HttpError(400, "Idempotency-Key header and body value differ");
+        return fail("Idempotency-Key header and body value differ", 400);
       }
       const idempotencyKey = headerKey ?? bodyKey;
       if (idempotencyKey && (idempotencyKey.trim().length === 0 || idempotencyKey.length > 128)) {
-        throw new HttpError(400, "Invalid idempotency key");
+        return fail("Invalid idempotency key", 400);
       }
       const { data, error } = await client.rpc("start_assessment_attempt", {
         p_assessment_id: startAssessment[1],
         p_candidate_skill_id: candidateSkillId,
         p_idempotency_key: idempotencyKey,
       });
-      if (error) throw dbError(error);
+      if (error) {
+        const status = error.code === "42501" ? 403 : error.code === "P0002" ? 404 :
+          error.code === "P0001" || error.code === "23505" ? 409 : 400;
+        return fail(error.message, status);
+      }
       const reused = isRecord(data) && data.reused === true;
       return json({ data, reused }, reused ? 200 : 201);
     }
