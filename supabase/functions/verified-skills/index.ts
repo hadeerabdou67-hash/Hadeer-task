@@ -137,7 +137,7 @@ async function handle(req: Request): Promise<Response> {
       return json({ data });
     }
 
-    const startAssessment = path.match(/^\\/api\\/v1\\/assessments\\/([0-9a-f-]{36})\\/start$/i);
+    const startAssessment = path.match(/^\/api\/v1\/assessments\/([0-9a-f-]{36})\/start$/i);
     if (req.method === "POST" && startAssessment) {
       const input = await body(req);
       const candidateSkillId = requiredString(input.candidate_skill_id, "candidate_skill_id", 36);
