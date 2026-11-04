@@ -140,3 +140,13 @@ Not yet completed: a full authenticated HTTP journey using a real test-user acce
 4. Set `CORS_ORIGIN` to the actual frontend origin before production; the default wildcard is for development convenience.
 5. Replace demo assessment content with reviewed production questions and answer keys before real candidate verification.
 6. Security Advisor reports five authenticated SECURITY DEFINER RPC wrappers for review, plus an informational deny-by-default finding for the private answer-key table. The wrappers are intentional, narrowly scoped entry points; the private implementation functions remain inaccessible and each operation validates the authenticated identity. Performance Advisor currently reports 11 unused indexes because the new schema has little representative traffic; keep the FK/RLS-supporting indexes and reassess after real workload data. Re-run both Advisors after deployment and review any new findings.
+
+
+## Live HTTP verification (Postman)
+
+Ready-to-run authenticated API collection and environment template:
+- `postman/Verified-Skills-Live-E2E.postman_collection.json`
+- `postman/Verified-Skills-Test.postman_environment.json`
+- `postman/README.md`
+
+Create a dedicated confirmed Supabase Auth test user, then set the publishable/anon key and test credentials in the local Postman environment. Run the collection in order to exercise sign-in, authenticated API calls, skill claim, assessment retrieval, attempt creation, answer submission, server-side scoring, badge retrieval and history. The collection contains no credentials. It creates real test records; use a dedicated test account and clean them up after capturing evidence. A real credentialed HTTP run has not been performed from this environment because no test-user credentials were provided.
