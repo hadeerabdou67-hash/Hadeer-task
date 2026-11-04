@@ -34,7 +34,7 @@ supabase/
     verified_skills_smoke_test.sql
 ```
 
-Migration versions are unique and ordered. The live project has the schema changes applied. For a fresh linked project, run:
+Migration versions are unique and ordered. The live project has the schema changes applied through the Supabase management connection. For a fresh project, the ordered repository migrations can be applied with the CLI. **Do not run `supabase db push` against the already-provisioned project yet:** the management connection recorded server-generated migration version IDs that do not match the repository filenames; reconcile the migration ledger before switching that same project to CLI-driven migrations. For a fresh project, run:
 
 ```bash
 supabase link --project-ref lcuhfpmpsgdysjhvdpcf
