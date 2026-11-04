@@ -18,12 +18,12 @@ supabase link --project-ref lcuhfpmpsgdysjhvdpcf
 supabase db push
 ```
 
-The migrations create the requested entities, indexes, RLS policies, grants, scoring RPC, security hardening and isolated demo fixtures. They seed `demo-candidate-001` as a demo profile with a claimed SQL Fundamentals skill, not as an Auth user. The migrations have been applied to the linked project.
+The migrations create the requested entities, indexes, RLS policies, grants, scoring RPC, security hardening and isolated demo fixtures. They seed `demo-candidate-001` as a demo profile with a claimed SQL Fundamentals skill, not as an Auth user. The migrations, including the follow-up hardening, have been applied to the linked project.
 
 ## Edge Function
 Function: `verified-skills`
 
-Deployment status: **ACTIVE** on the linked Supabase project (JWT verification enabled). To redeploy from a local checkout:
+Deployment status: **ACTIVE (version 3)** on the linked Supabase project (JWT verification enabled). Attempt creation is performed by a transactional database RPC; clients cannot insert attempt rows directly. To redeploy from a local checkout:
 ```bash
 supabase functions deploy verified-skills
 ```
@@ -75,9 +75,12 @@ The demo candidate is isolated fixture data. For an end-to-end API test, sign in
 - [x] Applied database migrations to the linked project.
 - [x] Confirmed all 12 requested tables exist and RLS is enabled.
 - [x] Confirmed seed data: 2 categories, 3 skills, 1 published assessment, 1 question and demo candidate/skill.
-- [x] Confirmed authenticated users cannot read answer keys or directly execute private scoring/profile routines; guarded public RPCs remain available.
+- [x] Confirmed authenticated users cannot read answer keys, write attempt/result/verification lifecycle rows directly, or execute private scoring/profile/start routines; guarded public RPCs remain available.
+- [x] Confirmed candidate skill claims cannot be inserted with a forged verified status.
+- [x] Confirmed attempt ownership is enforced by a composite foreign key.
+- [x] Confirmed answer validation and attempt locking triggers are installed.
 - [x] Deployed Edge Function; status ACTIVE with JWT verification enabled.
 - [x] Ran Supabase Security and Performance Advisors.
-- [ ] Run authenticated end-to-end claim/start/answer/submit tests with a real test account.
+- [ ] Run authenticated end-to-end claim/start/answer/submit tests with a real test account; this requires a valid test-user session.
 
-Advisor notes: the private answer-key table intentionally has RLS enabled with no client policies. The two public SECURITY DEFINER RPCs are narrow authenticated wrappers; their internal private routines are not executable by authenticated clients. Performance advisor currently reports unused indexes on this new, low-traffic schema; reassess after representative query traffic.
+Advisor notes: the private answer-key table intentionally has RLS enabled with no client policies. The public SECURITY DEFINER RPCs (`ensure_candidate_profile`, `start_assessment_attempt`, `submit_assessment_attempt`) are narrow authenticated entry points; each internal routine checks `auth.uid()` and scopes operations to that identity. Supabase Security Advisor reports these wrappers for review by design. Performance Advisor may report unused indexes while the schema has little traffic; reassess after representative usage.
