@@ -126,7 +126,7 @@ Confirmed on the linked project:
 - Guarded public RPCs are available to authenticated users.
 - The Edge Function is active at version 6 with JWT verification enabled.
 
-Not yet completed: a full authenticated HTTP journey using a real test-user access token (claim → start → save answer → submit → verify badge). The demo candidate is intentionally not an Auth user, and no real user session was created for this test.
+Not yet completed: a full authenticated HTTP journey using a real test-user access token (claim → start → save answer → submit → verify badge). The demo candidate is intentionally not an Auth user, and no real user session was created for this test. The Edge Function deployment succeeded (version 6, JWT enabled); a live HTTP request with a real Auth session is still required to certify the full API journey.
 
 ## Production integration notes
 
@@ -135,4 +135,4 @@ Not yet completed: a full authenticated HTTP journey using a real test-user acce
 3. Confirm that the `public` schema is exposed in the Supabase Data API settings.
 4. Set `CORS_ORIGIN` to the actual frontend origin before production; the default wildcard is for development convenience.
 5. Replace demo assessment content with reviewed production questions and answer keys before real candidate verification.
-6. Security Advisor may flag the authenticated SECURITY DEFINER RPC wrappers for review. These are intentional, narrowly scoped entry points; the private implementation functions remain inaccessible and each operation validates the authenticated identity. Re-run the Advisor after deployment and review any new findings.
+6. Security Advisor reports five authenticated SECURITY DEFINER RPC wrappers for review, plus an informational deny-by-default finding for the private answer-key table. The wrappers are intentional, narrowly scoped entry points; the private implementation functions remain inaccessible and each operation validates the authenticated identity. Performance Advisor currently reports 11 unused indexes because the new schema has little representative traffic; keep the FK/RLS-supporting indexes and reassess after real workload data. Re-run both Advisors after deployment and review any new findings.
