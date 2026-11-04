@@ -174,7 +174,7 @@ revoke all on function public.ensure_candidate_profile() from public, anon;
 grant execute on function public.ensure_candidate_profile() to authenticated;
 
 -- Submit and score atomically inside Postgres. Answer keys are never selected by API queries.
-create or replace function public.submit_assessment_attempt(p_attempt_id uuid)
+create or replace function private.submit_assessment_attempt(p_attempt_id uuid)
 returns jsonb
 language plpgsql
 security definer
@@ -220,9 +220,9 @@ begin
     where (q.question_type = 'single_choice' and aa.answer = k.correct_answers)
        or (q.question_type = 'true_false' and aa.answer = k.correct_answers)
        or (q.question_type = 'multiple_choice' and
-           (select coalesce(array_agg(x order by x), array[]::text[]) from jsonb_array_elements_text(aa.answer) x)
+           (select coalesce(array_agg(value order by value), array[]::text[]) from jsonb_array_elements_text(aa.answer) as answer_values(value))
            =
-           (select coalesce(array_agg(x order by x), array[]::text[]) from jsonb_array_elements_text(k.correct_answers) x))
+           (select coalesce(array_agg(value order by value), array[]::text[]) from jsonb_array_elements_text(k.correct_answers) as key_values(value)))
   ),0)
   into v_earned
   from public.assessment_answers aa
@@ -257,6 +257,12 @@ begin
     'score',v_score,'passed',v_passed,'status',case when v_passed then 'verified' else 'failed' end);
 end;
 $$;
+revoke all on function private.submit_assessment_attempt(uuid) from public, anon;
+grant execute on function private.submit_assessment_attempt(uuid) to authenticated;
+
+create or replace function public.submit_assessment_attempt(p_attempt_id uuid)
+returns jsonb language sql security invoker set search_path = ''
+as $ select private.submit_assessment_attempt(p_attempt_id); $;
 revoke all on function public.submit_assessment_attempt(uuid) from public, anon;
 grant execute on function public.submit_assessment_attempt(uuid) to authenticated;
 
