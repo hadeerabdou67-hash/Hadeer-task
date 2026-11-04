@@ -115,7 +115,7 @@ Run the transactional security test (it rolls back its temporary fixture changes
 
 `supabase/tests/verified_skills_security.sql`
 
-The security test was executed successfully against the linked project. It verifies RLS coverage, private answer-key isolation, least-privilege grants, guarded RPC permissions, demo fixtures and rejection of an attempt that pairs a candidate's claim with an assessment for a different skill.
+The security test was executed successfully against the linked project. It verifies RLS coverage, private answer-key isolation, least-privilege grants, guarded RPC permissions, demo fixtures and rejection of an attempt that pairs a candidate's claim with an assessment for a different skill. A separate SQL auth smoke test also confirmed that claim, start, save-answer and submit RPCs reject unauthenticated calls.
 
 Confirmed on the linked project:
 - 12 public tables and the private answer-key table exist.
