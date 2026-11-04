@@ -1,0 +1,2 @@
+[functions.verified-skills]
+verify_jwt = true
