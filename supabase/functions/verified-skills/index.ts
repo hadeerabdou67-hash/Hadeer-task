@@ -174,7 +174,6 @@ async function handle(req: Request): Promise<Response> {
         attempt_number: attemptNumber, expires_at: expiresAt, idempotency_key: idempotencyKey,
       }).select("id,assessment_id,attempt_number,status,started_at,expires_at").single();
       if (error) throw error;
-      await client.from("candidate_skills").update({ status: "in_progress" }).eq("id", candidateSkillId);
       return json({ data }, 201);
     }
 
