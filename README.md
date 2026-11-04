@@ -29,9 +29,11 @@ supabase/
     20261104200000_verified_skills_integrity_concurrency.sql
     20261104200200_finalize_scoring_and_profile_permissions.sql
     20261104210000_index_attempts_candidate_skill_owner.sql
+    20261104220000_fix_candidate_profile_bootstrap_wrapper.sql
   tests/
     verified_skills_security.sql
     verified_skills_smoke_test.sql
+    verified_skills_e2e.sql
 ```
 
 Migration versions are unique and ordered. The live project has the schema changes applied through the Supabase management connection. For a fresh project, the ordered repository migrations can be applied with the CLI. **Do not run `supabase db push` against the already-provisioned project yet:** the management connection recorded server-generated migration version IDs that do not match the repository filenames; reconcile the migration ledger before switching that same project to CLI-driven migrations. For a fresh project, run:
@@ -115,10 +117,11 @@ Run the transactional security test (it rolls back its temporary fixture changes
 
 `supabase/tests/verified_skills_security.sql`
 
-The security test was executed successfully against the linked project. It verifies RLS coverage, private answer-key isolation, least-privilege grants, guarded RPC permissions, demo fixtures and rejection of an attempt that pairs a candidate's claim with an assessment for a different skill. A separate SQL auth smoke test also confirmed that claim, start, save-answer and submit RPCs reject unauthenticated calls.
+The security test was executed successfully against the linked project. It verifies RLS coverage, private answer-key isolation, least-privilege grants, guarded RPC permissions, demo fixtures and rejection of an attempt that pairs a candidate's claim with an assessment for a different skill. A separate SQL auth smoke test also confirmed that claim, start, save-answer and submit RPCs reject unauthenticated calls. The full transactional SQL E2E test was also executed successfully: it simulated an authenticated identity, provisioned a candidate profile, claimed SQL Fundamentals, started the published demo assessment, submitted the correct answer, scored 100% server-side and issued a verified badge; the transaction rolled back and left no test user or attempt behind. This validates the database workflow under an authenticated JWT context, but it is not a live HTTP test using a real browser access token.
 
 Confirmed on the linked project:
 - 12 public tables and the private answer-key table exist.
+- The candidate-profile bootstrap RPC is a SECURITY DEFINER wrapper; authenticated clients can call the public wrapper while the private implementation remains inaccessible. This was corrected after the integration audit.
 - All module tables have RLS enabled.
 - Authenticated users cannot directly insert claims, attempts or answers.
 - Authenticated users cannot directly modify candidate profiles, attempts, answers, results or verification lifecycle records.
