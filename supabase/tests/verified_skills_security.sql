@@ -11,8 +11,9 @@ declare
   v_api_candidate_skill uuid;
   v_rls_disabled_count integer;
 begin
-  if has_table_privilege('authenticated','public.candidate_skills','INSERT') then
-    raise exception 'FAIL: authenticated can directly insert candidate skills';
+  if has_table_privilege('authenticated','public.candidate_skills','INSERT')
+     or has_table_privilege('authenticated','public.candidate_skills','DELETE') then
+    raise exception 'FAIL: authenticated can directly insert or delete candidate skills';
   end if;
   if has_table_privilege('authenticated','public.assessment_attempts','INSERT') then
     raise exception 'FAIL: authenticated can directly insert attempts';
@@ -30,6 +31,10 @@ begin
      or has_function_privilege('authenticated','private.save_assessment_answer(uuid,uuid,jsonb)','EXECUTE')
      or has_function_privilege('authenticated','private.submit_assessment_attempt(uuid)','EXECUTE') then
     raise exception 'FAIL: authenticated can directly execute a private workflow function';
+  end if;
+  if not has_function_privilege('authenticated','public.remove_candidate_skill(uuid)','EXECUTE')
+     or has_function_privilege('authenticated','private.remove_candidate_skill(uuid)','EXECUTE') then
+    raise exception 'FAIL: safe claim-removal RPC permissions are incorrect';
   end if;
   if not has_function_privilege('authenticated','public.claim_candidate_skill(uuid)','EXECUTE')
      or not has_function_privilege('authenticated','public.start_assessment_attempt(uuid,uuid,text)','EXECUTE')
