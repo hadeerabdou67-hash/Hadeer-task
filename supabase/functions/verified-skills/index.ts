@@ -137,44 +137,27 @@ async function handle(req: Request): Promise<Response> {
       return json({ data });
     }
 
-    const startAssessment = path.match(/^\/api\/v1\/assessments\/([0-9a-f-]{36})\/start$/i);
+    const startAssessment = path.match(/^\\/api\\/v1\\/assessments\\/([0-9a-f-]{36})\\/start$/i);
     if (req.method === "POST" && startAssessment) {
-      const assessmentId = startAssessment[1];
       const input = await body(req);
-      const candidateSkillId = requiredString(input.candidate_skill_id, "candidate_skill_id", 80);
-      const idempotencyKey = req.headers.get("idempotency-key") ?? (typeof input.idempotency_key === "string" ? input.idempotency_key : null);
-      if (idempotencyKey) {
-        const { data: existing } = await client.from("assessment_attempts")
-          .select("id,status,expires_at").eq("candidate_id", candidate)
-          .eq("idempotency_key", idempotencyKey).maybeSingle();
-        if (existing) return json({ data: existing, reused: true });
+      const candidateSkillId = requiredString(input.candidate_skill_id, "candidate_skill_id", 36);
+      const headerKey = req.headers.get("idempotency-key");
+      const bodyKey = typeof input.idempotency_key === "string" ? input.idempotency_key : null;
+      if (headerKey && bodyKey && headerKey !== bodyKey) {
+        throw new HttpError(400, "Idempotency-Key header and body value differ");
       }
-      const { data: assessment, error: aErr } = await client.from("assessments")
-        .select("id,skill_id,duration_minutes,max_attempts,retake_cooldown_hours")
-        .eq("id", assessmentId).eq("is_published", true).single();
-      if (aErr || !assessment) return fail("Assessment not found", 404);
-      const { data: cs, error: csErr } = await client.from("candidate_skills")
-        .select("id,skill_id,status").eq("id", candidateSkillId)
-        .eq("candidate_id", candidate).single();
-      if (csErr || !cs || cs.skill_id !== assessment.skill_id) return fail("Claim the matching skill before starting", 403);
-      const { data: previous, error: pErr } = await client.from("assessment_attempts")
-        .select("attempt_number,started_at,status").eq("candidate_id", candidate)
-        .eq("assessment_id", assessmentId).order("attempt_number", { ascending: false });
-      if (pErr) throw pErr;
-      if ((previous?.length ?? 0) >= assessment.max_attempts) return fail("Maximum attempts reached", 429);
-      const last = previous?.[0];
-      if (last && assessment.retake_cooldown_hours > 0) {
-        const allowedAt = new Date(new Date(last.started_at).getTime() + assessment.retake_cooldown_hours * 3600000);
-        if (allowedAt > new Date()) return json({ error: "Retake cooldown active", retry_at: allowedAt.toISOString() }, 429);
+      const idempotencyKey = headerKey ?? bodyKey;
+      if (idempotencyKey && (idempotencyKey.trim().length === 0 || idempotencyKey.length > 128)) {
+        throw new HttpError(400, "Invalid idempotency key");
       }
-      const attemptNumber = (previous?.[0]?.attempt_number ?? 0) + 1;
-      const expiresAt = new Date(Date.now() + assessment.duration_minutes * 60000).toISOString();
-      const { data, error } = await client.from("assessment_attempts").insert({
-        candidate_id: candidate, candidate_skill_id: candidateSkillId, assessment_id: assessmentId,
-        attempt_number: attemptNumber, expires_at: expiresAt, idempotency_key: idempotencyKey,
-      }).select("id,assessment_id,attempt_number,status,started_at,expires_at").single();
-      if (error) throw error;
-      return json({ data }, 201);
+      const { data, error } = await client.rpc("start_assessment_attempt", {
+        p_assessment_id: startAssessment[1],
+        p_candidate_skill_id: candidateSkillId,
+        p_idempotency_key: idempotencyKey,
+      });
+      if (error) throw dbError(error);
+      const reused = isRecord(data) && data.reused === true;
+      return json({ data, reused }, reused ? 200 : 201);
     }
 
     const answerAttempt = path.match(/^\/api\/v1\/attempts\/([0-9a-f-]{36})\/answers$/i);
