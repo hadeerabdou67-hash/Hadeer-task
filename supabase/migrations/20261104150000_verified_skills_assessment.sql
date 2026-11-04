@@ -153,7 +153,7 @@ create index if not exists idx_verifications_candidate_skill on public.skill_ver
 -- Candidate profile is created lazily from the authenticated identity.
 create or replace function private.ensure_candidate_profile()
 returns uuid language plpgsql security definer set search_path = ''
-as $
+as $function$
 declare v_id uuid;
 begin
   if auth.uid() is null then raise exception 'Authentication required' using errcode = '42501'; end if;
@@ -163,13 +163,13 @@ begin
   returning id into v_id;
   return v_id;
 end;
-$;
+$function$;
 revoke all on function private.ensure_candidate_profile() from public, anon;
 grant execute on function private.ensure_candidate_profile() to authenticated;
 
 create or replace function public.ensure_candidate_profile()
 returns uuid language sql security invoker set search_path = ''
-as $ select private.ensure_candidate_profile(); $;
+as $function$ select private.ensure_candidate_profile(); $function$;
 revoke all on function public.ensure_candidate_profile() from public, anon;
 grant execute on function public.ensure_candidate_profile() to authenticated;
 
@@ -262,7 +262,7 @@ grant execute on function private.submit_assessment_attempt(uuid) to authenticat
 
 create or replace function public.submit_assessment_attempt(p_attempt_id uuid)
 returns jsonb language sql security invoker set search_path = ''
-as $ select private.submit_assessment_attempt(p_attempt_id); $;
+as $function$ select private.submit_assessment_attempt(p_attempt_id); $function$;
 revoke all on function public.submit_assessment_attempt(uuid) from public, anon;
 grant execute on function public.submit_assessment_attempt(uuid) to authenticated;
 
