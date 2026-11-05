@@ -1,0 +1,490 @@
+{
+  "info": {
+    "_postman_id": "7f4e8b2a-2c7f-4d91-a4d3-verifiedskills",
+    "name": "Verified Skills + Assessment Engine — Live API E2E",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Authenticated HTTP smoke and demo assessment workflow. Supply a dedicated Supabase Auth test account in the environment. Never use a production candidate account."
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "https://lcuhfpmpsgdysjhvdpcf.supabase.co"
+    },
+    {
+      "key": "anonKey",
+      "value": ""
+    },
+    {
+      "key": "email",
+      "value": ""
+    },
+    {
+      "key": "password",
+      "value": ""
+    },
+    {
+      "key": "accessToken",
+      "value": ""
+    },
+    {
+      "key": "skillId",
+      "value": ""
+    },
+    {
+      "key": "candidateSkillId",
+      "value": ""
+    },
+    {
+      "key": "assessmentId",
+      "value": ""
+    },
+    {
+      "key": "attemptId",
+      "value": ""
+    },
+    {
+      "key": "questionId",
+      "value": ""
+    },
+    {
+      "key": "answerValue",
+      "value": "b"
+    },
+    {
+      "key": "lastResponse",
+      "value": ""
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{accessToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "00 — Sign in (creates access token)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "apikey",
+            "value": "{{anonKey}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/auth/v1/token?grant_type=password",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"email\":\"{{email}}\",\"password\":\"{{password}}\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Sign-in returns 200',()=>pm.response.to.have.status(200));",
+              "const j=pm.response.json();",
+              "pm.test('Access token exists',()=>pm.expect(j.access_token).to.be.a('string').and.not.empty);",
+              "if(j.access_token) pm.environment.set('accessToken',j.access_token);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "01 — List skills",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "apikey",
+            "value": "{{anonKey}}"
+          }
+        ],
+        "url": "{{baseUrl}}/functions/v1/verified-skills/api/v1/skills"
+      },
+      "auth": {
+        "type": "bearer",
+        "bearer": [
+          {
+            "key": "token",
+            "value": "{{accessToken}}",
+            "type": "string"
+          }
+        ]
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Skills endpoint returns 200',()=>pm.response.to.have.status(200));",
+              "const j=pm.response.json();",
+              "pm.test('Skills array returned',()=>pm.expect(j.data).to.be.an('array').and.not.empty);",
+              "const s=(j.data||[]).find(x=>x.slug==='sql-fundamentals');",
+              "pm.test('SQL demo skill exists',()=>pm.expect(s,'sql-fundamentals seed').to.exist);",
+              "if(s) pm.environment.set('skillId',s.id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "02 — Claim SQL Fundamentals",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "apikey",
+            "value": "{{anonKey}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/functions/v1/verified-skills/api/v1/candidate/skills",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"skill_id\":\"{{skillId}}\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "auth": {
+        "type": "bearer",
+        "bearer": [
+          {
+            "key": "token",
+            "value": "{{accessToken}}",
+            "type": "string"
+          }
+        ]
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Claim returns success',()=>pm.expect(pm.response.code).to.be.oneOf([200,201]));",
+              "const j=pm.response.json();",
+              "const d=j.data||j;",
+              "pm.test('Candidate skill ID returned',()=>pm.expect(d.id).to.be.a('string'));",
+              "if(d.id) pm.environment.set('candidateSkillId',d.id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "03 — List published assessments",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "apikey",
+            "value": "{{anonKey}}"
+          }
+        ],
+        "url": "{{baseUrl}}/functions/v1/verified-skills/api/v1/assessments?skill_id={{skillId}}"
+      },
+      "auth": {
+        "type": "bearer",
+        "bearer": [
+          {
+            "key": "token",
+            "value": "{{accessToken}}",
+            "type": "string"
+          }
+        ]
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Assessments endpoint returns 200',()=>pm.response.to.have.status(200));",
+              "const j=pm.response.json();",
+              "const a=(j.data||[]).find(x=>x.title==='SQL Fundamentals — Demo Assessment') || (j.data||[])[0];",
+              "pm.test('Published assessment exists',()=>pm.expect(a).to.exist);",
+              "if(a) pm.environment.set('assessmentId',a.id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "04 — Get assessment detail (public questions only)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "apikey",
+            "value": "{{anonKey}}"
+          }
+        ],
+        "url": "{{baseUrl}}/functions/v1/verified-skills/api/v1/assessments/{{assessmentId}}"
+      },
+      "auth": {
+        "type": "bearer",
+        "bearer": [
+          {
+            "key": "token",
+            "value": "{{accessToken}}",
+            "type": "string"
+          }
+        ]
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Assessment detail returns 200',()=>pm.response.to.have.status(200));",
+              "const j=pm.response.json(), a=j.data;",
+              "const qs=(a?.sections||[]).flatMap(s=>s.questions||[]);",
+              "pm.test('Assessment contains questions',()=>pm.expect(qs).not.to.be.empty);",
+              "pm.test('Answer keys are not exposed',()=>pm.expect(JSON.stringify(j)).not.to.match(/correct_answers|answer_key/i));",
+              "if(qs[0]) pm.environment.set('questionId',qs[0].id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "05 — Start assessment attempt",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "apikey",
+            "value": "{{anonKey}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Idempotency-Key",
+            "value": "postman-verified-skills-e2e-001"
+          }
+        ],
+        "url": "{{baseUrl}}/functions/v1/verified-skills/api/v1/assessments/{{assessmentId}}/start",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"candidate_skill_id\":\"{{candidateSkillId}}\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "auth": {
+        "type": "bearer",
+        "bearer": [
+          {
+            "key": "token",
+            "value": "{{accessToken}}",
+            "type": "string"
+          }
+        ]
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Start attempt returns success',()=>pm.expect(pm.response.code).to.be.oneOf([200,201]));",
+              "const j=pm.response.json(),d=j.data||j;",
+              "pm.test('Attempt ID returned',()=>pm.expect(d.id).to.be.a('string'));",
+              "if(d.id) pm.environment.set('attemptId',d.id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "06 — Save demo answer (SQL fixture only)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "apikey",
+            "value": "{{anonKey}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/functions/v1/verified-skills/api/v1/attempts/{{attemptId}}/answers",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"question_id\":\"{{questionId}}\",\"answer\":\"{{answerValue}}\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "auth": {
+        "type": "bearer",
+        "bearer": [
+          {
+            "key": "token",
+            "value": "{{accessToken}}",
+            "type": "string"
+          }
+        ]
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Answer save returns 200',()=>pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "07 — Submit and score server-side",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "apikey",
+            "value": "{{anonKey}}"
+          }
+        ],
+        "url": "{{baseUrl}}/functions/v1/verified-skills/api/v1/attempts/{{attemptId}}/submit"
+      },
+      "auth": {
+        "type": "bearer",
+        "bearer": [
+          {
+            "key": "token",
+            "value": "{{accessToken}}",
+            "type": "string"
+          }
+        ]
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Submit returns 200',()=>pm.response.to.have.status(200));",
+              "const j=pm.response.json(),d=j.data||j;",
+              "pm.test('Server returns scored status',()=>pm.expect(d.status).to.be.oneOf(['verified','failed']));",
+              "pm.test('Score is numeric',()=>pm.expect(d.score).to.be.a('number'));",
+              "if(d.status==='verified') pm.environment.set('e2eResult','VERIFIED'); else pm.environment.set('e2eResult','FAILED — inspect score and demo answer');"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "08 — Verify badge",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "apikey",
+            "value": "{{anonKey}}"
+          }
+        ],
+        "url": "{{baseUrl}}/functions/v1/verified-skills/api/v1/candidate/verified-skills"
+      },
+      "auth": {
+        "type": "bearer",
+        "bearer": [
+          {
+            "key": "token",
+            "value": "{{accessToken}}",
+            "type": "string"
+          }
+        ]
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Verified skills endpoint returns 200',()=>pm.response.to.have.status(200));",
+              "const j=pm.response.json();",
+              "pm.test('Verified skills response is an array',()=>pm.expect(j.data).to.be.an('array'));",
+              "const found=(j.data||[]).some(x=>x.candidate_skill?.skill?.slug==='sql-fundamentals');",
+              "pm.test('SQL Fundamentals badge exists after passing assessment',()=>pm.expect(found).to.be.true);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "09 — Assessment history",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "apikey",
+            "value": "{{anonKey}}"
+          }
+        ],
+        "url": "{{baseUrl}}/functions/v1/verified-skills/api/v1/candidate/assessment-history"
+      },
+      "auth": {
+        "type": "bearer",
+        "bearer": [
+          {
+            "key": "token",
+            "value": "{{accessToken}}",
+            "type": "string"
+          }
+        ]
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Assessment history returns 200',()=>pm.response.to.have.status(200));",
+              "const j=pm.response.json();",
+              "pm.test('History is an array',()=>pm.expect(j.data).to.be.an('array'));"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
